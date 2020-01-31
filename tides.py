@@ -1,12 +1,12 @@
 import re
+import sys
 import datetime
 import pandas as pd
 import numpy as np
 import requests
 from bs4 import BeautifulSoup
-import matplotlib.pyplot
+import matplotlib.pyplot as plt
 import matplotlib.dates as mdates
-import seaborn as sns
 from pandas.plotting import register_matplotlib_converters
 register_matplotlib_converters()
 
@@ -14,9 +14,9 @@ register_matplotlib_converters()
 # Adrian Rosoga, 19 Jan 2020
 #
 # Westminster
-# https://flood-warning-information.service.gov.uk/station/7389?direction=u#summary-express
+# https://flood-warning-information.service.gov.uk/station/7389
 # Chelsea
-# https://flood-warning-information.service.gov.uk/station/7392?direction=u#summary-express
+# https://flood-warning-information.service.gov.uk/station/7392
 #
 # <tr>
 #     <td scope="row"><time datetime="2020-01-14T17:15Z">2020-01-14T17:15Z</time></td>
@@ -24,9 +24,6 @@ register_matplotlib_converters()
 #     <td>false</td>
 # </tr>
 
-
-tide_info_page_westminster = 'https://flood-warning-information.service.gov.uk/station/7389?direction=u#summary-express'
-tide_info_page_chelsea = 'https://flood-warning-information.service.gov.uk/station/7392?direction=u#summary-express'
 
 STATIONS = {'Dover': 1158,
             'Southend': 7386,
@@ -37,6 +34,7 @@ STATIONS = {'Dover': 1158,
             'Westminster': 7389,
             'Chelsea': 7392,
             'Richmond': 7393}
+
 
 tide_info_webpage_template = 'https://flood-warning-information.service.gov.uk/station/{station}'
 
@@ -96,96 +94,105 @@ def process(lines, station='', show_plot=False):
     dates = [date for date, _ in date_levels]
     levels = [level for _, level in date_levels]
 
-    vertical_water_speed_cm_per_min = [(l2 - l1) * 100.0 / 15.0 for l2, l1 in zip(levels[1:], levels[:-1])]
+    tide_speed_cm_per_min = [(l2 - l1) * 100.0 / 15.0 for l2, l1 in zip(levels[1:], levels[:-1])]
 
-    #for date, level, speed in zip(dates, levels, vertical_water_speed_cm_per_min):
-    #    print(f"{date}: Level={level:5.2f} m   Rise={speed:5.2f} cm/min")
+    if False:
+        for date, level, speed in zip(dates, levels, tide_speed_cm_per_min):
+            print(f"{date}: Level={level:5.2f} m   Rise={speed:5.2f} cm/min")
 
     print("")
     print(f'=== {station}')
-    #print(f"{len(date_levels)} water levels")
     print(f"Maximum level {max(levels)} m")
     print(f"Minimum level {min(levels)} m")
     print(f"Delta {max(levels) - min(levels):.1f} m")
-    print(f"Maximum vertical speed {max(vertical_water_speed_cm_per_min):.2f} cm per min")
-    print(f"Minimum vertical speed {min(vertical_water_speed_cm_per_min):.2f} cm per min")
-    # print(f"{len(levels)} levels recorded, {len(set(levels))} unique ones")
-    # print(f"{len(vertical_water_speed_cm_per_min)} water speed recorded, {len(set(vertical_water_speed_cm_per_min))} unique ones")
+    print(f"Maximum vertical speed {max(tide_speed_cm_per_min):.2f} cm per min")
+    print(f"Minimum vertical speed {min(tide_speed_cm_per_min):.2f} cm per min")
     print(f"From {date_levels[0][0]} to {date_levels[len(date_levels) - 1][0]}")
 
-    figure = matplotlib.pyplot.figure()
+    plot(station, dates, levels, tide_speed_cm_per_min, show_plot)
+
+
+def plot(station, dates, levels, tide_speed_cm_per_min, show_plot):
+
+    figure = plt.figure(figsize=(20, 10))
     plot = figure.add_subplot(111)
 
-    plot.plot(dates, levels, 'blue', marker="*")
+    plot.plot(dates, levels, 'blue', marker="*", label="Water level")
 
-    matplotlib.pyplot.ylabel("Water level (m)", color='blue', fontweight='bold', fontsize='17')
+    plt.ylabel("Water level (m)", color='blue', fontweight='bold', fontsize=17)
 
-    # plot.plot(dates, levels, marker=matplotlib.markers.CARETDOWNBASE)
-    #plot.plot(dates, levels, marker=".")
     plot2 = plot.twinx()
 
-    plot2.plot(dates[:-1], vertical_water_speed_cm_per_min, 'orange', marker=".", linewidth=0.5)
-
-    sns.set(style='ticks')
+    plot2.plot(dates[:-1], tide_speed_cm_per_min, 'orange', marker=".", linewidth=0.5, label="Tide rise speed")
 
     plot.axhline(linewidth=1, color='r')
     plot.grid(color='g', linestyle=':', linewidth=0.5)
 
-    matplotlib.pyplot.xlabel("Date")
-    #matplotlib.pyplot.ylabel("Water level (m) and tide rise speed (cm/min)")
+    plt.xlabel("Date")
 
-    plot.format_xdata = mdates.DateFormatter('%Y-%m-%d')
-    plot2.format_xdata = mdates.DateFormatter('%Y-%m-%d')
+    plot.format_xdata = mdates.DateFormatter('%Y-%m-%d %H:%M')
+    plot2.format_xdata = mdates.DateFormatter('%Y-%m-%d %H:%M')
 
-    plot.fmt_xdata = mdates.DateFormatter('%Y-%m-%d')
-    plot2.fmt_xdata = mdates.DateFormatter('%Y-%m-%d')
+    plt.ylabel("Tide rise speed (cm/min)", color='orange', fontweight='bold', fontsize=17)
 
-    matplotlib.pyplot.ylabel("Tide rise speed (cm/min)", color='orange', fontweight='bold', fontsize='17')
+    # Mark the last point on each graph
+    plot.scatter(dates[-1], levels[-1], marker='o', s=400, c='blue')
+    plot2.scatter(dates[-2], tide_speed_cm_per_min[-1], marker='o', s=400, c='blue')
 
-    font = {'family': 'serif',
-            'color': 'darkred',
-            'weight': 'bold',
-            'size': 16, }
+    title_font = {'family': 'serif',
+                  'color': 'black',
+                  'weight': 'bold',
+                  'size': 16, }
 
-    plot.scatter(dates[-1], levels[-1], marker=m)
-    plot2.scatter(dates[-2], vertical_water_speed_cm_per_min[-1], marker=m)
+    # Title
+    plt.title(f'Thames at {station} (2 days)\n{dates[-1]}', fontdict=title_font)
 
-    matplotlib.pyplot.title(f'Thames at {station} (2 days)\n{dates[-1]}', fontdict=font)
-
-    # DOES NOT WORK FOR 2 PLOTS matplotlib.pyplot.xticks(rotation=45)
-
+    # Rotate the x axis to avoid overlapping
     for label in plot.get_xticklabels() + plot2.get_xticklabels():
         label.set_rotation(30)
         label.set_ha('right')
 
-    t = matplotlib.pyplot.text(dates[0], 0, f'min={min(levels):.1f}m max={max(levels):.1f} delta={(max(levels) - min(levels)):.1f}m')
-    t.set_bbox(dict(facecolor='yellow', alpha=1, edgecolor='blue'))
+    # Info about levels
+    level_info_box = plt.text(dates[0], 0,
+                              f'min={min(levels):.1f}m max={max(levels):.1f} delta={(max(levels) - min(levels)):.1f}m',
+                              fontsize=22)
+    level_info_box.set_bbox(dict(facecolor='yellow', alpha=1, edgecolor='blue'))
 
-    last_date = str(dates[-1]).replace(' ', '_')
-    last_date = last_date.replace(':', '-')
-    #matplotlib.pyplot.figure(figsize=(6.4, 6.4), dpi=200)
-    matplotlib.pyplot.savefig(f'records/Thames_at_{station}_{last_date}.png', dpi=300)
+    plot.legend(loc='upper left', fontsize='x-large')
+    plot2.legend(loc='upper right', fontsize='x-large')
+
+    # Save to file
+    last_date = str(dates[-1]).replace(' ', '_').replace(':', '-')
+    plt.savefig(f'records/Thames_at_{station}_{last_date}.png', dpi=300)
 
     if show_plot:
-        matplotlib.pyplot.show()
+        plt.show()
 
 
-def main(station: str, show_plot=True):
+def process_from_web(station: str, show_plot=True):
 
     tide_info_page = tide_info_webpage_template.format(station=STATIONS[station])
     lines = (line for line in tide_data_generator_from_web(tide_info_page))
 
-    #station = 'Westminster'
-    #filename = 'Thames_Levels.html'
-    #lines = (line for line in tide_data_generator_from_file(filename))
+    process(lines, station, show_plot)
+
+
+def process_from_file(station: str, show_plot=True):
+
+    station = 'Westminster'
+    filename = 'Thames_Levels.html'
+    lines = (line for line in tide_data_generator_from_file(filename))
 
     process(lines, station, show_plot)
 
 
 if __name__ == "__main__":
 
-    if True:
-        main('Chelsea')
+    #process_from_file('', show_plot=True)
+    #sys.exit(1)
+
+    if False:
+        process_from_web('Chelsea')
     else:
         for station in STATIONS:
-            main(station, False)
+            process_from_web(station, show_plot=False)
