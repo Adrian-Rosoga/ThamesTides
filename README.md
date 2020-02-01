@@ -1,4 +1,4 @@
 Tides
 
-![Battersea at slack water](/photos/Battersea_Slack_Water.jpg)
+![Battersea at slack water](Battersea_Slack_Water.jpg)
 Format: ![Alt Text](url)
