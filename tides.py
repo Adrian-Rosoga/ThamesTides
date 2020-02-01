@@ -1,8 +1,6 @@
 import re
 import sys
 import datetime
-import pandas as pd
-import numpy as np
 import requests
 from bs4 import BeautifulSoup
 import matplotlib.pyplot as plt
@@ -13,10 +11,7 @@ register_matplotlib_converters()
 #
 # Adrian Rosoga, 19 Jan 2020
 #
-# Westminster
-# https://flood-warning-information.service.gov.uk/station/7389
-# Chelsea
-# https://flood-warning-information.service.gov.uk/station/7392
+# Westminster: https://flood-warning-information.service.gov.uk/station/7389
 #
 # <tr>
 #     <td scope="row"><time datetime="2020-01-14T17:15Z">2020-01-14T17:15Z</time></td>
@@ -25,15 +20,17 @@ register_matplotlib_converters()
 # </tr>
 
 
-STATIONS = {'Dover': 1158,
-            'Southend': 7386,
-            'Sheerness': 1157,
-            'Tilbury': 7394,
-            'Silvertown': 7388,
-            'Tower Pier': 7391,
-            'Westminster': 7389,
-            'Chelsea': 7392,
-            'Richmond': 7393}
+# station_name -> (station_id, description)
+STATIONS = {'Dover': (1158, 'Dover'),
+            'Southend': (7386, 'Southend'),
+            'Sheerness': (1157, 'Sheerness'),
+            'Tilbury': (7394, 'Tilbury'),
+            'Silvertown': (7388, 'Silvertown'),
+            'Tower Pier': (7391, 'Thames at Tower Pier'),
+            'Westminster': (7389, 'Thames at Westminster'),
+            'Chelsea': (7392, 'Thames at Chelsea'),
+            'Richmond': (7393, 'Thames at Richmond')
+            }
 
 
 tide_info_webpage_template = 'https://flood-warning-information.service.gov.uk/station/{station}'
@@ -102,8 +99,8 @@ def process(lines, station='', show_plot=False):
 
     print("")
     print(f'=== {station}')
-    print(f"Maximum level {max(levels)} m")
-    print(f"Minimum level {min(levels)} m")
+    print(f"Maximum level {max(levels)} m"
+          f"Minimum level {min(levels)} m")
     print(f"Delta {max(levels) - min(levels):.1f} m")
     print(f"Maximum vertical speed {max(tide_speed_cm_per_min):.2f} cm per min")
     print(f"Minimum vertical speed {min(tide_speed_cm_per_min):.2f} cm per min")
@@ -114,17 +111,26 @@ def process(lines, station='', show_plot=False):
 
 def plot(station, dates, levels, tide_speed_cm_per_min, show_plot):
 
+    # Colors from http://ksrowell.com/blog-visualizing-data/2012/02/02/optimal-colors-for-graphs/
+    water_color = '#396AB1'
+    tide_rise_color = '#DA7C30'
+    title_color = '#535154'
+    box_background_color = '#CCC210'
+
+    station_description = STATIONS[station][1]
+
     figure = plt.figure(figsize=(20, 10))
     plot = figure.add_subplot(111)
 
-    plot.plot(dates, levels, 'blue', marker="*", label="Water level")
+    plot.plot(dates, levels, water_color, marker="*", label="Water level")
 
-    plt.ylabel("Water level (m)", color='blue', fontweight='bold', fontsize=17)
+    plt.ylabel("Water level (m)", color=water_color, fontweight='bold', fontsize=17)
 
     plot2 = plot.twinx()
 
-    plot2.plot(dates[:-1], tide_speed_cm_per_min, 'orange', marker=".", linewidth=0.5, label="Tide rise speed")
+    plot2.plot(dates[:-1], tide_speed_cm_per_min, tide_rise_color, marker=".", linewidth=0.5, label="Tide rise speed")
 
+    # Grid
     plot.axhline(linewidth=1, color='r')
     plot.grid(color='g', linestyle=':', linewidth=0.5)
 
@@ -133,37 +139,44 @@ def plot(station, dates, levels, tide_speed_cm_per_min, show_plot):
     plot.format_xdata = mdates.DateFormatter('%Y-%m-%d %H:%M')
     plot2.format_xdata = mdates.DateFormatter('%Y-%m-%d %H:%M')
 
-    plt.ylabel("Tide rise speed (cm/min)", color='orange', fontweight='bold', fontsize=17)
+    plt.ylabel("Tide rise speed (cm/min)", color=tide_rise_color, fontweight='bold', fontsize=17)
 
     # Mark the last point on each graph
-    plot.scatter(dates[-1], levels[-1], marker='o', s=400, c='blue')
-    plot2.scatter(dates[-2], tide_speed_cm_per_min[-1], marker='o', s=400, c='blue')
+    plot.scatter(dates[-1], levels[-1], marker='s', s=400, c=water_color)
+    plot2.scatter(dates[-2], tide_speed_cm_per_min[-1], marker='s', s=400, c=tide_rise_color)
 
     title_font = {'family': 'serif',
-                  'color': 'black',
+                  'color': title_color,
                   'weight': 'bold',
-                  'size': 16, }
+                  'size': 24, }
 
     # Title
-    plt.title(f'Thames at {station} (2 days)\n{dates[-1]}', fontdict=title_font)
+    plt.title(f'{station_description} (2 days)\n{dates[-1]}', fontdict=title_font)
 
     # Rotate the x axis to avoid overlapping
     for label in plot.get_xticklabels() + plot2.get_xticklabels():
         label.set_rotation(30)
         label.set_ha('right')
+        label.set_fontsize(12)
+
+    # Format of date on x axis
+    ax = plt.gca()
+    xaxisFmt = mdates.DateFormatter('%Y-%m-%d %H:%M')
+    ax.xaxis.set_major_formatter(xaxisFmt)
 
     # Info about levels
     level_info_box = plt.text(dates[0], 0,
-                              f'min={min(levels):.1f}m max={max(levels):.1f} delta={(max(levels) - min(levels)):.1f}m',
-                              fontsize=22)
-    level_info_box.set_bbox(dict(facecolor='yellow', alpha=1, edgecolor='blue'))
+                              f'Current={levels[-1]:.1f}m\nMin={min(levels):.1f}m Max={max(levels):.1f} Delta={(max(levels) - min(levels)):.1f}m',
+                              fontsize=32)
+    level_info_box.set_bbox(dict(facecolor=box_background_color, alpha=1, edgecolor=box_background_color))
 
+    # Legend
     plot.legend(loc='upper left', fontsize='x-large')
     plot2.legend(loc='upper right', fontsize='x-large')
 
     # Save to file
     last_date = str(dates[-1]).replace(' ', '_').replace(':', '-')
-    plt.savefig(f'records/Thames_at_{station}_{last_date}.png', dpi=300)
+    plt.savefig(f'records/{station_description}_{last_date}.png', dpi=300)
 
     if show_plot:
         plt.show()
@@ -171,7 +184,7 @@ def plot(station, dates, levels, tide_speed_cm_per_min, show_plot):
 
 def process_from_web(station: str, show_plot=True):
 
-    tide_info_page = tide_info_webpage_template.format(station=STATIONS[station])
+    tide_info_page = tide_info_webpage_template.format(station=STATIONS[station][0])
     lines = (line for line in tide_data_generator_from_web(tide_info_page))
 
     process(lines, station, show_plot)
@@ -180,7 +193,7 @@ def process_from_web(station: str, show_plot=True):
 def process_from_file(station: str, show_plot=True):
 
     station = 'Westminster'
-    filename = 'Thames_Levels.html'
+    filename = 'test/Thames_Tide.html'
     lines = (line for line in tide_data_generator_from_file(filename))
 
     process(lines, station, show_plot)
@@ -188,8 +201,12 @@ def process_from_file(station: str, show_plot=True):
 
 if __name__ == "__main__":
 
-    #process_from_file('', show_plot=True)
-    #sys.exit(1)
+    process_from_file('', show_plot=True)
+
+    #process_from_web('Chelsea')
+    #process_from_web('Dover')
+
+    sys.exit(1)
 
     if False:
         process_from_web('Chelsea')
