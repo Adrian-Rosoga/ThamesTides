@@ -1,11 +1,19 @@
 # Tides
 
-Started getting interested in Thames flow when in search for the rather rare moment when the river is at slack water.
+Started getting interested in Thames flow when in search for the rather rare moment when the river is at [slack water](https://en.wikipedia.org/wiki/Slack_water).
 To get reflections on the surface of the water not only Thames should be between tides but there should be no winds and no boats.
 In a blue moon it happens, as below.
 
-![Battersea at slack water](Battersea_Slack_Water.jpg){:height="50%" width="50%"}
+Data is scrapped from the .gov site and enriched with the tide rise speed graph and max and min levels.
 
-![London Eye at slack water](Slack_water_London_Eye.jpg)
+<p align="center">
+  <img src="Thames_at_Westminster_2020-01-19_10-00-00.png">
+</p>
 
-![]("Thames_at_Westminster_2020-01-19_10-00-00.png")
+<p align="center">
+  <img src="Slack_water_London_Eye.jpg" width="60%" height="60%">
+</p>
+
+<p align="center">
+  <img src="Slack_water_Battersea.jpg" width="40%" height="40%">
+</p>
