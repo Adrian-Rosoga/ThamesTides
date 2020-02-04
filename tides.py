@@ -5,13 +5,14 @@ import requests
 from bs4 import BeautifulSoup
 import matplotlib.pyplot as plt
 import matplotlib.dates as mdates
+import pandas as pd
 from pandas.plotting import register_matplotlib_converters
 register_matplotlib_converters()
 
 #
 # Adrian Rosoga, 19 Jan 2020
 #
-# Westminster: https://flood-warning-information.service.gov.uk/station/7389
+# Example @ Westminster: https://flood-warning-information.service.gov.uk/station/7389
 #
 
 
@@ -36,25 +37,19 @@ def tide_data_generator_from_web(tide_info_page: str):
     page = requests.get(tide_info_page)
 
     if page.status_code != requests.codes.ok:
-        print('Error')
+        print('Couldn\'t find the page')
         raise StopIteration
 
-    # TODO - Extract only relevant info
-    # soup = BeautifulSoup(page.text, 'html.parser')
-    # items = soup.find_all('tr')
-
-    for line in page.text.split('\n'):
-        yield line
+    return parse(page.text)
 
 
 def tide_data_generator_from_file(filename: str):
 
     with open(filename) as f:
-        for line in f:
-            yield line
+        return parse(f.read())
 
 
-def process(generator, station='', show_plot=False):
+def parse(file_content):
 
     """
     <tr>
@@ -64,35 +59,45 @@ def process(generator, station='', show_plot=False):
     </tr>
     """
 
-    lines = (line for line in generator)
+    soup = BeautifulSoup(file_content, features="lxml")
+    rows = soup.find_all('tr')
+
+    # Reverse the order as latest data comes first
+    for row in reversed(rows):
+        timestamp = row.find('time')
+        if timestamp:
+            timestamp_obj = datetime.datetime.strptime(timestamp.text, '%Y-%m-%dT%H:%MZ')
+            water_level = row.find('td', {"class": "numeric"})
+            yield timestamp_obj, float(water_level.text)
+
+
+def process(generator, station='', show_plot=False):
+
+    #df = pd.DataFrame(generator, columns=['Date', 'Level'])
+    #df.plot(x='Date', y='Level', kind='line')
+    #plt.show()
+    #sys.exit(0)
+    #dates = df['Date'].tolist()
+    #levels = df['Level'].tolist()
 
     dates = []
     levels = []
-    for line in lines:
 
-        DATETIME_RE = r'<time.*>(.*)</time>'
-        m = re.search(DATETIME_RE, line)
-        if m:
-            datetime_str = m[1]
-            datetime_obj = datetime.datetime.strptime(datetime_str, '%Y-%m-%dT%H:%MZ')
-
-            next_line = next(lines)
-            LEVEL_RE = r'<td class="numeric">(.*)</td>'
-            m = re.search(LEVEL_RE, next_line)
-            if m:
-                level = float(m[1])
-
-                # Reverse the order
-                dates.insert(0, datetime_obj)
-                levels.insert(0, level)
+    for timestamp, level in generator:
+        dates.append(timestamp)
+        levels.append(level)
 
     # Analize only the first 2 days
     #dates = dates[:4 * 24 * 4]
     #levels = levels[:4 * 24 * 4]
 
     # Analize only the last 2 days
-    dates = dates[4 * 24 * 4:]
-    levels = levels[4 * 24 * 4:]
+    #dates = dates[4 * 24 * 4:]
+    #levels = levels[4 * 24 * 4:]
+
+    if len(dates) == 0:
+        print('No data!')
+        return
 
     tide_speed_cm_per_min = [(l2 - l1) * 100.0 / 15.0 for l2, l1 in zip(levels[1:], levels[:-1])]
 
@@ -103,6 +108,7 @@ def process(generator, station='', show_plot=False):
     print('\n'.join((f'=== {station} from {dates[0]} to {dates[-1]}',
                      f'Max level {max(levels):.1f}m',
                      f'Min level {min(levels):.1f}m',
+                     f'Avg level {sum(levels)/len(levels):.1f}m',
                      f'Delta level {max(levels) - min(levels):.1f}m',
                      f'Max tide rise speed {max(tide_speed_cm_per_min):.1f}cm/min',
                      f'Min tide rise speed {min(tide_speed_cm_per_min):.1f}cm/min')))
@@ -123,7 +129,7 @@ def plot(station, dates, levels, tide_speed_cm_per_min, show_plot):
     figure = plt.figure(figsize=(20, 10))
     plot = figure.add_subplot(111)
 
-    plot.plot(dates, levels, water_color, marker='*', label='Water level')
+    plot.plot(dates, levels, water_color, marker='.', label='Water level')
 
     plt.ylabel('Water level (m)', color=water_color, fontweight='bold', fontsize=22)
 
@@ -167,7 +173,8 @@ def plot(station, dates, levels, tide_speed_cm_per_min, show_plot):
 
     # Info about levels
     level_info_box = plt.text(dates[0], 0,
-                              f'Now={levels[-1]:.1f}m\n(Min={min(levels):.1f}m Max={max(levels):.1f}m Delta={(max(levels) - min(levels)):.1f}m)',
+                              f'Now={levels[-1]:.1f}m\n(Min={min(levels):.1f}m Max={max(levels):.1f}m'
+                              f' Delta={(max(levels) - min(levels)):.1f}m Avg={(sum(levels)/len(levels)):.1f}m',
                               fontsize=32)
     level_info_box.set_bbox(dict(facecolor=box_background_color, alpha=1, edgecolor=box_background_color))
 
@@ -197,15 +204,20 @@ def process_from_file(station: str, filename: str, show_plot=True):
 
 if __name__ == '__main__':
 
+    #parser = argparse.ArgumentParser(description='Climate')
+    #parser.add_argument('-i', '--interval', help='reporting interval in seconds')
+    #parser.add_argument('-d', '--display_only', help='only display, no reporting', action="store_true")
+    #args = parser.parse_args()
+
     #process_from_file('Westminster', 'test/Thames_Tide.html', show_plot=True)
 
-    process_from_web('Chelsea')
-    process_from_web('Dover')
+    #process_from_web('Chelsea')
+    #process_from_web('Westminster')
 
-    sys.exit(1)
+    #sys.exit(1)
 
     if False:
         process_from_web('Chelsea')
     else:
         for station in STATIONS:
-            process_from_web(station, show_plot=False)
+            process_from_web(station, show_plot=True)
