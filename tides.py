@@ -2,12 +2,10 @@ import re
 import sys
 import datetime
 import requests
+import argparse
 from bs4 import BeautifulSoup
 import matplotlib.pyplot as plt
 import matplotlib.dates as mdates
-import pandas as pd
-from pandas.plotting import register_matplotlib_converters
-register_matplotlib_converters()
 
 #
 # Adrian Rosoga, 19 Jan 2020
@@ -37,7 +35,7 @@ def tide_data_generator_from_web(tide_info_page: str):
     page = requests.get(tide_info_page)
 
     if page.status_code != requests.codes.ok:
-        print('Couldn\'t find the page')
+        print('Couldn\'t open the web page')
         raise StopIteration
 
     return parse(page.text)
@@ -71,14 +69,7 @@ def parse(file_content):
             yield timestamp_obj, float(water_level.text)
 
 
-def process(generator, station='', show_plot=False):
-
-    #df = pd.DataFrame(generator, columns=['Date', 'Level'])
-    #df.plot(x='Date', y='Level', kind='line')
-    #plt.show()
-    #sys.exit(0)
-    #dates = df['Date'].tolist()
-    #levels = df['Level'].tolist()
+def process(generator, station='', show_plot=True, save_to_file=False, all_five_days=False):
 
     dates = []
     levels = []
@@ -87,13 +78,10 @@ def process(generator, station='', show_plot=False):
         dates.append(timestamp)
         levels.append(level)
 
-    # Analize only the first 2 days
-    #dates = dates[:4 * 24 * 4]
-    #levels = levels[:4 * 24 * 4]
-
-    # Analize only the last 2 days
-    #dates = dates[4 * 24 * 4:]
-    #levels = levels[4 * 24 * 4:]
+    if not all_five_days:
+        # Analize only the last 2 days
+        dates = dates[4 * 24 * 4:]
+        levels = levels[4 * 24 * 4:]
 
     if len(dates) == 0:
         print('No data!')
@@ -105,18 +93,18 @@ def process(generator, station='', show_plot=False):
         for date, level, speed in zip(dates, levels, tide_speed_cm_per_min):
             print(f'{date}: Level={level:5.2f}m   Rise={speed:5.2f}cm/min')
 
-    print('\n'.join((f'=== {station} from {dates[0]} to {dates[-1]}',
+    print('\n'.join((f'\n=== {station} from {dates[0]} to {dates[-1]}\n',
                      f'Max level {max(levels):.1f}m',
                      f'Min level {min(levels):.1f}m',
                      f'Avg level {sum(levels)/len(levels):.1f}m',
-                     f'Delta level {max(levels) - min(levels):.1f}m',
+                     f'Amplitude {max(levels) - min(levels):.1f}m',
                      f'Max tide rise speed {max(tide_speed_cm_per_min):.1f}cm/min',
                      f'Min tide rise speed {min(tide_speed_cm_per_min):.1f}cm/min')))
 
-    plot(station, dates, levels, tide_speed_cm_per_min, show_plot)
+    plot(station, dates, levels, tide_speed_cm_per_min, show_plot, save_to_file)
 
 
-def plot(station, dates, levels, tide_speed_cm_per_min, show_plot):
+def plot(station, dates, levels, tide_speed_cm_per_min, show_plot, save_to_file):
 
     # Colors from http://ksrowell.com/blog-visualizing-data/2012/02/02/optimal-colors-for-graphs/
     water_color = '#396AB1'
@@ -158,7 +146,7 @@ def plot(station, dates, levels, tide_speed_cm_per_min, show_plot):
                   'size': 24, }
 
     # Title
-    plt.title(f'{station_description} (2 days)\n{dates[-1]}', fontdict=title_font)
+    plt.title(f'{station_description}\nFrom {dates[0]} to {dates[-1]}', fontdict=title_font)
 
     # Rotate the x axis to avoid overlapping
     for label in plot.get_xticklabels() + plot2.get_xticklabels():
@@ -174,7 +162,7 @@ def plot(station, dates, levels, tide_speed_cm_per_min, show_plot):
     # Info about levels
     level_info_box = plt.text(dates[0], 0,
                               f'Now={levels[-1]:.1f}m\n(Min={min(levels):.1f}m Max={max(levels):.1f}m'
-                              f' Delta={(max(levels) - min(levels)):.1f}m Avg={(sum(levels)/len(levels)):.1f}m',
+                              f' Avg={(sum(levels)/len(levels)):.1f}m Delta={(max(levels) - min(levels)):.1f}m',
                               fontsize=32)
     level_info_box.set_bbox(dict(facecolor=box_background_color, alpha=1, edgecolor=box_background_color))
 
@@ -183,41 +171,63 @@ def plot(station, dates, levels, tide_speed_cm_per_min, show_plot):
     plot2.legend(loc='upper right', fontsize='x-large')
 
     # Save to file
-    last_date = str(dates[-1]).replace(' ', '_').replace(':', '-')
-    plt.savefig(f'records/{station_description}_{last_date}.png', dpi=300)
+    if save_to_file:
+        last_date = str(dates[-1]).replace(' ', '_').replace(':', '-')
+        plt.savefig(f'records/{station_description}_{last_date}.png', dpi=300)
 
     if show_plot:
         plt.show()
 
 
-def process_from_web(station: str, show_plot=True):
+def process_from_web(station: str, show_plot=True, save_to_file=False, all_five_days=False):
 
     tide_info_page = tide_info_webpage_template.format(station=STATIONS[station][0])
 
-    process(tide_data_generator_from_web(tide_info_page), station, show_plot)
+    process(tide_data_generator_from_web(tide_info_page), station, show_plot, save_to_file, all_five_days)
 
 
-def process_from_file(station: str, filename: str, show_plot=True):
+def process_from_file(station: str, filename: str, show_plot=True, save_to_file=False, all_five_days=False):
 
-    process(tide_data_generator_from_file(filename), station, show_plot)
+    process(tide_data_generator_from_file(filename), station, show_plot, save_to_file, all_five_days)
 
 
 if __name__ == '__main__':
 
-    #parser = argparse.ArgumentParser(description='Climate')
-    #parser.add_argument('-i', '--interval', help='reporting interval in seconds')
-    #parser.add_argument('-d', '--display_only', help='only display, no reporting', action="store_true")
-    #args = parser.parse_args()
+    parser = argparse.ArgumentParser(description='Tides')
+    parser.add_argument('--list', help='list all stations', action='store_true')
+    parser.add_argument('--all', help='show all stations', action='store_true')
+    parser.add_argument('--station', help='station to show')
+    parser.add_argument('--file', help='process from file (testing purposes)')
+    parser.add_argument('--noplot', help='do not show the plot on screen', action='store_true')
+    parser.add_argument('--save', help='save to file', action='store_true')
+    parser.add_argument('--five', help='all (five) days', action='store_true')
+    args = parser.parse_args()
 
-    #process_from_file('Westminster', 'test/Thames_Tide.html', show_plot=True)
+    if args.list:
+        for station in STATIONS.keys():
+            print(station)
+        sys.exit(0)
 
-    #process_from_web('Chelsea')
-    #process_from_web('Westminster')
+    all_five_days = True if args.five else False
 
-    #sys.exit(1)
+    show_plot = False if args.noplot else True
+    save_to_file = False if not args.save else True
 
-    if False:
-        process_from_web('Chelsea')
-    else:
+    if args.station:
+        process_from_web(args.station, show_plot=show_plot, save_to_file=save_to_file, all_five_days=all_five_days)
+        sys.exit(0)
+
+    if args.all:
         for station in STATIONS:
-            process_from_web(station, show_plot=True)
+            process_from_web(station, show_plot=show_plot, save_to_file=save_to_file, all_five_days=all_five_days)
+        sys.exit(0)
+
+    if args.file:
+        process_from_file('STATION', args.file, show_plot=show_plot,
+                          save_to_file=save_to_file,
+                          all_five_days=all_five_days)
+        sys.exit(0)
+
+    # Fallback - Chelsea is nearer until Westminster comes back online (down Feb 2020)
+    process_from_web('Chelsea', show_plot=show_plot, save_to_file=save_to_file, all_five_days=all_five_days)
+    # process_from_web('Westminster')
