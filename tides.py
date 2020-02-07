@@ -94,12 +94,14 @@ def process(generator, station='', show_plot=True, save_to_file=False, all_five_
             print(f'{date}: Level={level:5.2f}m   Rise={speed:5.2f}cm/min')
 
     print('\n'.join((f'\n=== {station} from {dates[0]} to {dates[-1]}\n',
+                     f'Current level {levels[-1]:.1f}m',
+                     f'Current tide speed {tide_speed_cm_per_min[-1]:.1f}cm/min',
                      f'Max level {max(levels):.1f}m',
                      f'Min level {min(levels):.1f}m',
                      f'Avg level {sum(levels)/len(levels):.1f}m',
                      f'Amplitude {max(levels) - min(levels):.1f}m',
                      f'Max tide rise speed {max(tide_speed_cm_per_min):.1f}cm/min',
-                     f'Min tide rise speed {min(tide_speed_cm_per_min):.1f}cm/min')))
+                     f'Max tide decrease speed {min(tide_speed_cm_per_min):.1f}cm/min')))
 
     plot(station, dates, levels, tide_speed_cm_per_min, show_plot, save_to_file)
 
@@ -117,7 +119,7 @@ def plot(station, dates, levels, tide_speed_cm_per_min, show_plot, save_to_file)
     figure = plt.figure(figsize=(20, 10))
     plot = figure.add_subplot(111)
 
-    plot.plot(dates, levels, water_color, marker='.', label='Water level')
+    plot.plot(dates, levels, water_color, marker='.', linewidth=3.0, label='Water level')
 
     plt.ylabel('Water level (m)', color=water_color, fontweight='bold', fontsize=22)
 
