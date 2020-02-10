@@ -27,7 +27,8 @@ STATIONS = {'Dover': (1158, 'Dover'),
             }
 
 
-tide_info_webpage_template = 'https://flood-warning-information.service.gov.uk/station/{station}'
+TIDE_INFO_WEBPAGE_TEMPLATE = 'https://flood-warning-information.service.gov.uk/station/{station}'
+RECORDS_DIR = 'records'  # Directory where figures are saved - relative to the script location directory
 
 
 def tide_data_generator_from_web(tide_info_page: str):
@@ -94,6 +95,7 @@ def process(generator, station='', show_plot=True, save_to_file=False, all_five_
             print(f'{date}: Level={level:5.2f}m   Rise={speed:5.2f}cm/min')
 
     print('\n'.join((f'\n=== {station} from {dates[0]} to {dates[-1]}\n',
+                     f'Current datetime {dates[-1]}',
                      f'Current level {levels[-1]:.1f}m',
                      f'Current tide speed {tide_speed_cm_per_min[-1]:.1f}cm/min',
                      f'Max level {max(levels):.1f}m',
@@ -174,8 +176,15 @@ def plot(station, dates, levels, tide_speed_cm_per_min, show_plot, save_to_file)
 
     # Save to file
     if save_to_file:
-        last_date = str(dates[-1]).replace(' ', '_').replace(':', '-')
-        plt.savefig(f'records/{station_description}_{last_date}.png', dpi=300)
+        last_date = str(dates[-1]).replace(':', '-')
+        filename = f'{station_description}_{last_date}.png'.replace(' ', '_')
+        pathname = f'{RECORDS_DIR}/{filename}'
+
+        try:
+            plt.savefig(f'{pathname}', dpi=300)
+            print(f'\nSaved graph as {pathname}')
+        except FileNotFoundError:
+            print(f'\nError: Couldn\'t save graph as {pathname}')
 
     if show_plot:
         plt.show()
@@ -183,7 +192,7 @@ def plot(station, dates, levels, tide_speed_cm_per_min, show_plot, save_to_file)
 
 def process_from_web(station: str, show_plot=True, save_to_file=False, all_five_days=False):
 
-    tide_info_page = tide_info_webpage_template.format(station=STATIONS[station][0])
+    tide_info_page = TIDE_INFO_WEBPAGE_TEMPLATE.format(station=STATIONS[station][0])
 
     process(tide_data_generator_from_web(tide_info_page), station, show_plot, save_to_file, all_five_days)
 
