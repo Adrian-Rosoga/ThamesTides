@@ -1,5 +1,6 @@
 import re
 import sys
+import time
 import datetime
 import requests
 import argparse
@@ -29,6 +30,7 @@ STATIONS = {'Dover': (1158, 'Dover'),
 
 TIDE_INFO_WEBPAGE_TEMPLATE = 'https://flood-warning-information.service.gov.uk/station/{station}'
 RECORDS_DIR = 'records'  # Directory where figures are saved - relative to the script location directory
+MINUTES_TO_SLEEP = 10
 
 
 def tide_data_generator_from_web(tide_info_page: str):
@@ -105,10 +107,10 @@ def process(generator, station='', show_plot=True, save_to_file=False, all_five_
                      f'Max tide rise speed {max(tide_speed_cm_per_min):.1f}cm/min',
                      f'Max tide decrease speed {min(tide_speed_cm_per_min):.1f}cm/min')))
 
-    plot(station, dates, levels, tide_speed_cm_per_min, show_plot, save_to_file)
+    plot(station, dates, levels, tide_speed_cm_per_min, show_plot, save_to_file, all_five_days)
 
 
-def plot(station, dates, levels, tide_speed_cm_per_min, show_plot, save_to_file):
+def plot(station, dates, levels, tide_speed_cm_per_min, show_plot, save_to_file, all_five_days=False):
 
     # Colors from http://ksrowell.com/blog-visualizing-data/2012/02/02/optimal-colors-for-graphs/
     water_color = '#396AB1'
@@ -176,8 +178,9 @@ def plot(station, dates, levels, tide_speed_cm_per_min, show_plot, save_to_file)
 
     # Save to file
     if save_to_file:
+        number_days = 5 if all_five_days else 2
         last_date = str(dates[-1]).replace(':', '-')
-        filename = f'{station_description}_{last_date}.png'.replace(' ', '_')
+        filename = f'{station_description}_{last_date}_{number_days}_days.png'.replace(' ', '_')
         pathname = f'{RECORDS_DIR}/{filename}'
 
         try:
@@ -212,6 +215,7 @@ if __name__ == '__main__':
     parser.add_argument('--noplot', help='do not show the plot on screen', action='store_true')
     parser.add_argument('--save', help='save to file', action='store_true')
     parser.add_argument('--five', help='all (five) days', action='store_true')
+    parser.add_argument(f'--continuous', help='repeat every {MINUTES_TO_SLEEP} mins', action='store_true')
     args = parser.parse_args()
 
     if args.list:
@@ -224,9 +228,8 @@ if __name__ == '__main__':
     show_plot = False if args.noplot else True
     save_to_file = False if not args.save else True
 
-    if args.station:
-        process_from_web(args.station, show_plot=show_plot, save_to_file=save_to_file, all_five_days=all_five_days)
-        sys.exit(0)
+    # Fallback - Chelsea is nearer until Westminster comes back online (down Feb 2020)
+    station = args.station if args.station else 'Chelsea'
 
     if args.all:
         for station in STATIONS:
@@ -239,6 +242,11 @@ if __name__ == '__main__':
                           all_five_days=all_five_days)
         sys.exit(0)
 
-    # Fallback - Chelsea is nearer until Westminster comes back online (down Feb 2020)
-    process_from_web('Chelsea', show_plot=show_plot, save_to_file=save_to_file, all_five_days=all_five_days)
+    if args.continuous:
+        while True:
+            process_from_web(station, show_plot=False, save_to_file=save_to_file, all_five_days=all_five_days)
+            print(f'Sleeping {MINUTES_TO_SLEEP} minutes...')
+            time.sleep(MINUTES_TO_SLEEP * 60)
+
+    process_from_web(station, show_plot=show_plot, save_to_file=save_to_file, all_five_days=all_five_days)
     # process_from_web('Westminster')
