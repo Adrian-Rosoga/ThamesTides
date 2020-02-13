@@ -38,7 +38,7 @@ def tide_data_generator_from_web(tide_info_page: str):
     page = requests.get(tide_info_page)
 
     if page.status_code != requests.codes.ok:
-        print('Couldn\'t open the web page')
+        print(f'Couldn\'t open the web page {tide_info_page}')
         raise StopIteration
 
     return parse(page.text)
