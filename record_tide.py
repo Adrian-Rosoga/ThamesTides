@@ -27,8 +27,8 @@ def process(station):
 
     date2level = OrderedDict()
 
-    for k, v in tide_data_generator_from_web(tide_info_page):
-        date2level[str(k)] = v, station
+    for date_time, level in tide_data_generator_from_web(tide_info_page):
+        date2level[str(date_time)] = level, station
 
     last_date = next(reversed(date2level.keys()))
     last_date = str(last_date).replace(':', '-').replace(' ', '_')
@@ -37,12 +37,13 @@ def process(station):
     with open(dump_filename, 'w') as fp:
         json.dump(date2level, fp, indent=4)
 
-    print(json.dumps(date2level, default=default, indent=4))
+    #print(json.dumps(date2level, default=default, indent=4))
 
     print(f'Data saved into "{dump_filename}"')
 
 
 def main():
+    """ Main - to please the linter """
 
     parser = argparse.ArgumentParser(description='Find time between high tides at two stations.\nDefault stations are Chelsea and Dover.')
     parser.add_argument('--list', help='list all stations', action='store_true')
