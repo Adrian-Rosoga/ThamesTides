@@ -1,27 +1,47 @@
 #!/usr/bin/env python3
 
+
+'''
+Save Thames level at a couple of stations of interest
+
+@author:     Adrian Rosoga
+
+@copyright:
+'''
+
+__all__ = []
+__version__ = 0.1
+__date__ = '2020-03-16'
+__updated__ = '2020-03-18'
+
+
 import sys
 import datetime
 import argparse
 import json
 from collections import OrderedDict
-from tides import tide_data_generator_from_web, parse, TIDE_INFO_WEBPAGE_TEMPLATE, STATIONS
+from tides import tide_data_generator_from_web, TIDE_INFO_WEBPAGE_TEMPLATE, STATIONS
 
 
 def default(obj):
+    """ Convert to isoformat - TBC"""
+
     if isinstance(obj, datetime.datetime):
-        return { '_isoformat': obj.isoformat() }
+        return {'_isoformat': obj.isoformat()}
     return super().default(obj)
 
 
 def object_hook(obj):
+    """ Convert from isoformat - TBC"""
+
     _isoformat = obj.get('_isoformat')
     if _isoformat is not None:
-        return datetime.fromisoformat(_isoformat)
+        return datetime.datetime.fromisoformat(_isoformat)
     return obj
 
 
 def process(station):
+    """ Process the station"""
 
     tide_info_page = TIDE_INFO_WEBPAGE_TEMPLATE.format(station=STATIONS[station][0])
 
@@ -34,8 +54,8 @@ def process(station):
     last_date = str(last_date).replace(':', '-').replace(' ', '_')
 
     dump_filename = f'Thames_Tide_{station}_{last_date}.dat'
-    with open(dump_filename, 'w') as fp:
-        json.dump(date2level, fp, indent=4)
+    with open(dump_filename, 'w') as handle:
+        json.dump(date2level, handle, indent=4)
 
     #print(json.dumps(date2level, default=default, indent=4))
 
@@ -52,11 +72,9 @@ def main():
     args = parser.parse_args()
 
     if args.list:
-        for station in STATIONS.keys():
+        for station in STATIONS:
             print(station)
         sys.exit(0)
-
-    save_to_file = False if not args.save else True
 
     station = args.station
 
