@@ -19,9 +19,18 @@ import sys
 import datetime
 import argparse
 import json
+from mongoengine import *
 from collections import OrderedDict
 from tides import tide_data_generator_from_web, TIDE_INFO_WEBPAGE_TEMPLATE, STATIONS
 
+
+MONGO_DB_TIDES_PREFIX = "tides"
+
+
+class Measurement(Document):
+    timestamp = DateTimeField(required=True)
+    level = DecimalField(required=True)
+    
 
 def default(obj):
     """ Convert to isoformat - TBC"""
@@ -40,7 +49,7 @@ def object_hook(obj):
     return obj
 
 
-def process(station):
+def get_time_series(station):
     """ Process the station"""
 
     tide_info_page = TIDE_INFO_WEBPAGE_TEMPLATE.format(station=STATIONS[station][0])
@@ -50,6 +59,22 @@ def process(station):
     for date_time, level in tide_data_generator_from_web(tide_info_page):
         date2level[str(date_time)] = level, station
 
+    return date2level
+
+
+def save_to_mongodb(station, date2level):
+
+    connect(MONGO_DB_TIDES_PREFIX + '_' + station, host='localhost', port=27017)
+
+    for timestamp, level in date2level.items():
+
+        measurement = Measurement(timestamp=timestamp, level=level[0])
+        print(timestamp, level[0])
+        measurement.save()
+
+
+def save_to_file(station, date2level):
+
     last_date = next(reversed(date2level.keys()))
     last_date = str(last_date).replace(':', '-').replace(' ', '_')
 
@@ -57,9 +82,17 @@ def process(station):
     with open(dump_filename, 'w') as handle:
         json.dump(date2level, handle, indent=4)
 
-    #print(json.dumps(date2level, default=default, indent=4))
+    # print(json.dumps(date2level, default=default, indent=4))
 
     print(f'Data saved into "{dump_filename}"')
+
+
+def process(station):
+
+    date2level = get_time_series(station)
+
+    save_to_file(station, date2level)
+    #save_to_mongodb(station, date2level)
 
 
 def main():
@@ -81,6 +114,7 @@ def main():
     if station is None:
         station = 'Chelsea'
 
+    
     process('Chelsea')
     process('Westminster')
 
