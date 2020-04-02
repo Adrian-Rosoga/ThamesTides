@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 
-import re
+
+import pytz
 import sys
 import time
 import datetime
@@ -33,6 +34,17 @@ STATIONS = {'Dover': (1158, 'Dover'),
 TIDE_INFO_WEBPAGE_TEMPLATE = 'https://flood-warning-information.service.gov.uk/station/{station}'
 RECORDS_DIR = 'records'  # Directory where figures are saved - relative to the script location directory
 MINUTES_TO_SLEEP = 10
+
+
+def london_time(timestring):
+
+    tz = pytz.timezone('UTC')
+    naive_time = datetime.datetime.strptime(timestring, "%Y-%m-%dT%H:%MZ")
+    tz_time = tz.localize(naive_time)
+    london_tz = pytz.timezone('Europe/London')
+    london_time = tz_time.astimezone(london_tz)
+
+    return london_time
 
 
 def tide_data_generator_from_web(tide_info_page: str):
@@ -69,7 +81,7 @@ def parse(file_content):
     for row in reversed(rows):
         timestamp = row.find('time')
         if timestamp:
-            timestamp_obj = datetime.datetime.strptime(timestamp.text, '%Y-%m-%dT%H:%MZ')
+            timestamp_obj = london_time(timestamp.text)
             water_level = row.find('td', {"class": "numeric"})
             yield timestamp_obj, float(water_level.text)
 
@@ -251,4 +263,3 @@ if __name__ == '__main__':
             time.sleep(MINUTES_TO_SLEEP * 60)
 
     process_from_web(station, show_plot=show_plot, save_to_file=save_to_file, all_five_days=all_five_days)
-    # process_from_web('Westminster')
