@@ -1,0 +1,92 @@
+
+=== Recipe
+
+From:
+https://docs.aws.amazon.com/elasticbeanstalk/latest/dg/create-deploy-python-flask.html
+
+I created and worked on ~/code_local/tides_app
+
+cd ~/code_local
+mkdir tides_app
+cd tides_app
+
+virtualenv virt
+source virt/bin/activate
+
+pip install bs4
+pip install matplotlib
+pip install requests
+pip install lxml
+pip install flask
+
+pip freeze
+
+pip freeze | tee requirements.txt
+
+Create application.py and test it!
+
+python application.py
+
+echo virt >> .ebignore
+echo HOWTO.txt >> .ebignore
+
+# Create application named tides_app and configures your local repository to create environments with the latest Python 3.6 platform version.
+eb init -p python-3.6 tides-app --region eu-west-2
+
+Optional:
+eb init
+
+# Create an environment and deploy your application
+eb create tides-env
+
+# Open web site
+eb open
+
+=== Recipe with Docker from local directory
+
+See:
+https://docs.aws.amazon.com/elasticbeanstalk/latest/dg/single-container-docker.html#single-container-docker
+
+Can work in the same above dir where played without docker.
+
+eb init -p docker tides-app --region eu-west-2
+
+eb local run --port 5000
+
+eb create tides-env
+
+eb open
+
+Test a remote docker
+
+docker login
+
+docker build -t arosoga/tides-app:latest .
+
+docker push arosoga/tides-app:latest
+
+=== Recipe with Docker from Docker Hub
+
+Create Dockerrun.aws.json in a separate dir.
+
+I used ~/code_local/tides_app_remote_docker
+
+eb init -p docker tides-app --region eu-west-2
+
+eb local run --port 5000
+
+To deploy from DockerHub just do:
+
+eb create tides-env
+
+eb open
+
+=== Useful when things go crazy
+
+eb terminate tides.env
+
+=== Notes
+
+- When running tides.py from virtualenv got:
+./tides.py:195: UserWarning: Matplotlib is currently using agg, which is a non-GUI backend, so cannot show the figure.
+  plt.show()
