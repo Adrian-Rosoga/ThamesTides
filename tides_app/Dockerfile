@@ -6,5 +6,6 @@ RUN pip install matplotlib
 RUN pip install requests
 RUN pip install lxml
 RUN pip install flask
+RUN pip install pytz
 EXPOSE 5000
 CMD ["python", "application.py"]

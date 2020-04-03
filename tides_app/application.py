@@ -11,7 +11,7 @@ page = """<HTML>
 <HEAD>
 <TITLE>Tide - Chelsea</TITLE>
 </HEAD>
-<BODY BGCOLOR="BLACK">
+<BODY BGCOLOR="WHITE">
 <P ALIGN="CENTER">
 <IMG SRC="plot.png" STYLE="WIDTH: 100%" ALT="NO IMAGE!" WIDTHX="840" HEIGHTX="420">
 </P>
@@ -21,7 +21,7 @@ page = """<HTML>
 
 @application.route('/')
 def process():
-    process_from_web('Chelsea', show_plot=False, save_to_file=True, all_five_days=False)
+    process_from_web('Chelsea', show_plot=False, save_to_file=True, all_five_days=False, save_plot_png=True)
     return page
 
 
@@ -32,9 +32,8 @@ def root():
 
 def main():
 
-    # Setting debug to True enables debug output. This line should be
-    # removed before deploying a production app.
-    application.debug = True
+    # Remove in production
+    # application.debug = True
     application.run(host="0.0.0.0")
 
 

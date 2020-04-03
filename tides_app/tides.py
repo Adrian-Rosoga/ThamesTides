@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 
-import re
+
+import pytz
 import sys
 import time
 import datetime
@@ -33,6 +34,17 @@ STATIONS = {'Dover': (1158, 'Dover'),
 TIDE_INFO_WEBPAGE_TEMPLATE = 'https://flood-warning-information.service.gov.uk/station/{station}'
 RECORDS_DIR = 'records'  # Directory where figures are saved - relative to the script location directory
 MINUTES_TO_SLEEP = 10
+
+
+def london_time(timestring):
+
+    tz = pytz.timezone('UTC')
+    naive_time = datetime.datetime.strptime(timestring, "%Y-%m-%dT%H:%MZ")
+    tz_time = tz.localize(naive_time)
+    london_tz = pytz.timezone('Europe/London')
+    london_time = tz_time.astimezone(london_tz)
+
+    return london_time
 
 
 def tide_data_generator_from_web(tide_info_page: str):
@@ -69,12 +81,12 @@ def parse(file_content):
     for row in reversed(rows):
         timestamp = row.find('time')
         if timestamp:
-            timestamp_obj = datetime.datetime.strptime(timestamp.text, '%Y-%m-%dT%H:%MZ')
+            timestamp_obj = london_time(timestamp.text)
             water_level = row.find('td', {"class": "numeric"})
             yield timestamp_obj, float(water_level.text)
 
 
-def process(generator, station='', show_plot=True, save_to_file=False, all_five_days=False):
+def process(generator, station='', show_plot=True, save_to_file=False, all_five_days=False, save_plot_png=False):
 
     dates = []
     levels = []
@@ -109,10 +121,10 @@ def process(generator, station='', show_plot=True, save_to_file=False, all_five_
                      f'Max tide rise speed {max(tide_speed_cm_per_min):.1f}cm/min',
                      f'Max tide decrease speed {min(tide_speed_cm_per_min):.1f}cm/min')))
 
-    plot(station, dates, levels, tide_speed_cm_per_min, show_plot, save_to_file, all_five_days)
+    plot(station, dates, levels, tide_speed_cm_per_min, show_plot, save_to_file, all_five_days, save_plot_png)
 
 
-def plot(station, dates, levels, tide_speed_cm_per_min, show_plot, save_to_file, all_five_days=False):
+def plot(station, dates, levels, tide_speed_cm_per_min, show_plot, save_to_file, all_five_days=False, save_plot_png=False):
 
     # Colors from http://ksrowell.com/blog-visualizing-data/2012/02/02/optimal-colors-for-graphs/
     water_color = '#396AB1'
@@ -122,13 +134,12 @@ def plot(station, dates, levels, tide_speed_cm_per_min, show_plot, save_to_file,
 
     station_description = STATIONS[station][1]
 
-    # ADIRX figure = plt.figure(figsize=(20, 10))
-    figure = plt.figure(figsize=(10, 5))
+    figure = plt.figure(figsize=(20, 10))
     plot = figure.add_subplot(111)
 
     plot.plot(dates, levels, water_color, marker='.', linewidth=3.0, label='Water level')
 
-    plt.ylabel('Water level (m)', color=water_color, fontweight='bold', fontsize=12)
+    plt.ylabel('Water level (m)', color=water_color, fontweight='bold', fontsize=22)
 
     plot2 = plot.twinx()
 
@@ -143,7 +154,7 @@ def plot(station, dates, levels, tide_speed_cm_per_min, show_plot, save_to_file,
     plot.format_xdata = mdates.DateFormatter('%Y-%m-%d %H:%M')
     plot2.format_xdata = mdates.DateFormatter('%Y-%m-%d %H:%M')
 
-    plt.ylabel('Tide rise speed (cm/min)', color=tide_rise_color, fontweight='bold', fontsize=12)
+    plt.ylabel('Tide rise speed (cm/min)', color=tide_rise_color, fontweight='bold', fontsize=22)
 
     # Mark the last point on each graph
     plot.scatter(dates[-1], levels[-1], marker='o', s=400, c=water_color)
@@ -152,7 +163,7 @@ def plot(station, dates, levels, tide_speed_cm_per_min, show_plot, save_to_file,
     title_font = {'family': 'serif',
                   'color': title_color,
                   'weight': 'bold',
-                  'size': 12, }
+                  'size': 24, }
 
     # Title
     plt.title(f'{station_description}\nFrom {dates[0]} to {dates[-1]}', fontdict=title_font)
@@ -172,22 +183,23 @@ def plot(station, dates, levels, tide_speed_cm_per_min, show_plot, save_to_file,
     level_info_box = plt.text(dates[0], 0,
                               f'Now={levels[-1]:.1f}m\n(Min={min(levels):.1f}m Max={max(levels):.1f}m'
                               f' Avg={(sum(levels)/len(levels)):.1f}m Delta={(max(levels) - min(levels)):.1f}m',
-                              fontsize=16)
+                              fontsize=32)
     level_info_box.set_bbox(dict(facecolor=box_background_color, alpha=1, edgecolor=box_background_color))
 
     # Legend
-    plot.legend(loc='upper left', fontsize='large')
-    plot2.legend(loc='upper right', fontsize='large')
+    plot.legend(loc='upper left', fontsize='x-large')
+    plot2.legend(loc='upper right', fontsize='x-large')
 
     # Save to file
     if save_to_file:
         number_days = 5 if all_five_days else 2
-        last_date = str(dates[-1]).replace(':', '-')
-        filename = f'{station_description}_{last_date}_{number_days}_days.png'.replace(' ', '_')
-        pathname = f'{RECORDS_DIR}/{filename}'
 
-        # ADIRX
-        pathname = 'plot.png'
+        if save_plot_png:
+            pathname = "plot.png"
+        else:
+            last_date = str(dates[-1]).replace(':', '-')
+            filename = f'{station_description}_{last_date}_{number_days}_days.png'.replace(' ', '_')
+            pathname = f'{RECORDS_DIR}/{filename}'
 
         try:
             plt.savefig(f'{pathname}', dpi=300)
@@ -199,16 +211,16 @@ def plot(station, dates, levels, tide_speed_cm_per_min, show_plot, save_to_file,
         plt.show()
 
 
-def process_from_web(station: str, show_plot=True, save_to_file=False, all_five_days=False):
+def process_from_web(station: str, show_plot=True, save_to_file=False, all_five_days=False, save_plot_png=False):
 
     tide_info_page = TIDE_INFO_WEBPAGE_TEMPLATE.format(station=STATIONS[station][0])
 
-    process(tide_data_generator_from_web(tide_info_page), station, show_plot, save_to_file, all_five_days)
+    process(tide_data_generator_from_web(tide_info_page), station, show_plot, save_to_file, all_five_days, save_plot_png)
 
 
-def process_from_file(station: str, filename: str, show_plot=True, save_to_file=False, all_five_days=False):
+def process_from_file(station: str, filename: str, show_plot=True, save_to_file=False, all_five_days=False, save_plot_png=False):
 
-    process(tide_data_generator_from_file(filename), station, show_plot, save_to_file, all_five_days)
+    process(tide_data_generator_from_file(filename), station, show_plot, save_to_file, all_five_days, save_plot_png)
 
 
 if __name__ == '__main__':
@@ -222,6 +234,7 @@ if __name__ == '__main__':
     parser.add_argument('--save', help='save to file', action='store_true')
     parser.add_argument('--five', help='all (five) days', action='store_true')
     parser.add_argument(f'--continuous', help='repeat every {MINUTES_TO_SLEEP} mins', action='store_true')
+    parser.add_argument('--save_plot_png', help='save as plot.png', action='store_true')
     args = parser.parse_args()
 
     if args.list:
@@ -233,19 +246,22 @@ if __name__ == '__main__':
 
     show_plot = False if args.noplot else True
     save_to_file = False if not args.save else True
+    save_plot_png = False if not args.save_plot_png else True
 
     # Fallback - Chelsea is nearer until Westminster comes back online (down Feb 2020)
     station = args.station if args.station else 'Chelsea'
 
     if args.all:
         for station in STATIONS:
-            process_from_web(station, show_plot=show_plot, save_to_file=save_to_file, all_five_days=all_five_days)
+            process_from_web(station, show_plot=show_plot, save_to_file=save_to_file,
+                             all_five_days=all_five_days, save_plot_png=save_plot_png)
         sys.exit(0)
 
     if args.file:
         process_from_file('STATION', args.file, show_plot=show_plot,
                           save_to_file=save_to_file,
-                          all_five_days=all_five_days)
+                          all_five_days=all_five_days,
+                          save_plot_png=save_plot_png)
         sys.exit(0)
 
     if args.continuous:
@@ -254,5 +270,5 @@ if __name__ == '__main__':
             print(f'Sleeping {MINUTES_TO_SLEEP} minutes...')
             time.sleep(MINUTES_TO_SLEEP * 60)
 
-    process_from_web(station, show_plot=show_plot, save_to_file=save_to_file, all_five_days=all_five_days)
-    # process_from_web('Westminster')
+    process_from_web(station, show_plot=show_plot, save_to_file=save_to_file,
+                     all_five_days=all_five_days, save_plot_png=save_plot_png)
