@@ -1,0 +1,49 @@
+ 
+=== Preparation
+
+Install the AWS CLI:
+https://docs.aws.amazon.com/cli/latest/userguide/cli-chap-install.html
+
+This started me on it but abandoned as it doesn't use Python:
+https://realpython.com/code-evaluation-with-aws-lambda-and-api-gateway
+
+Very useful, "How to return HTML from AWS API Gateway & Lambda":
+https://kennbrodhagen.net/2016/01/31/how-to-return-html-from-aws-api-gateway-lambda/
+
+=== HOWTO
+
+To deal with Python package dependencies:
+https://docs.aws.amazon.com/lambda/latest/dg/python-package.html#python-package-venv
+
+python3 -m venv v-env
+source v-env/bin/activate
+
+pip install bs4
+pip install matplotlib
+pip install requests
+pip install lxml
+pip install pytz
+
+deactivate
+
+cd v-env/lib/python3.7/site-packages
+
+export OLDPWD=/home/adi/code_local/ThamesTides/tides_app_lambda
+
+# Make it 755 else it won't found the code
+chmod 755 -R .
+
+zip -r9 ${OLDPWD}/function.zip .
+
+cd ${OLDPWD}
+
+# Make it 755 else it won't found the code
+
+chmod 755 tides.py
+zip -g function.zip tides.py
+
+chmod 755 application.py
+zip -g function.zip application.py
+
+# Update the .zip file with the lambda and all its dependencies from the cmd line
+aws lambda update-function-code --function-name Tides --zip-file fileb://function.zip
