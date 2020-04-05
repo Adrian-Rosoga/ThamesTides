@@ -19,9 +19,10 @@ page = '''<!DOCTYPE html>
 
 def handler(event, context):
 
-    base64_content = process_from_web('Chelsea', show_plot=False, save_to_file=True, all_five_days=False, save_plot_png=True)
+    base64_content = process_from_web('Chelsea', show_plot=False, save_to_file=True,
+                                      all_five_days=False, save_plot_png=False, return_base64=True)
 
-    return page.format(image=base64_content)
+    return page.format(image=base64_content.decode("utf-8"))
 
 
 if __name__ == '__main__':

@@ -15,6 +15,8 @@ https://kennbrodhagen.net/2016/01/31/how-to-return-html-from-aws-api-gateway-lam
 To deal with Python package dependencies:
 https://docs.aws.amazon.com/lambda/latest/dg/python-package.html#python-package-venv
 
+API Gateway needs of course configuring to provide access to the lambda.
+
 python3 -m venv v-env
 source v-env/bin/activate
 
@@ -47,3 +49,7 @@ zip -g function.zip application.py
 
 # Update the .zip file with the lambda and all its dependencies from the cmd line
 aws lambda update-function-code --function-name Tides --zip-file fileb://function.zip
+
+=== Run
+
+https://k99s80ecn0.execute-api.eu-west-2.amazonaws.com/v0/

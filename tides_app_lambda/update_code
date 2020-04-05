@@ -1,7 +1,13 @@
 #!/bin/bash
 
+echo "Updating application.py in the .zip file..."
 chmod 755 application.py
 zip -g function.zip application.py
 
+echo "Updating tides.py in the .zip file..."
+chmod 755 tides.py
+zip -g function.zip tides.py
+
 # Update the .zip file with the lambda and all its dependencies from the cmd line
+echo "Uploading to AWS Lambda..."
 aws lambda update-function-code --function-name Tides --zip-file fileb://function.zip

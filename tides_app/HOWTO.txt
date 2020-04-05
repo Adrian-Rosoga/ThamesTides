@@ -1,5 +1,5 @@
 
-=== Recipe
+=== Recipe - tides_app
 
 From:
 https://docs.aws.amazon.com/elasticbeanstalk/latest/dg/create-deploy-python-flask.html
@@ -47,7 +47,7 @@ eb open
 # Deploys your source code to the environment. Does "Uploading tides-app/app-200403_081509.zip to S3."
 eb deploy
 
-=== Recipe with Docker from local directory
+=== Recipe with Docker from local directory - tides_app
 
 See:
 https://docs.aws.amazon.com/elasticbeanstalk/latest/dg/single-container-docker.html#single-container-docker
@@ -70,7 +70,7 @@ docker build -t arosoga/tides-app:latest .
 
 docker push arosoga/tides-app:latest
 
-=== Recipe with Docker from Docker Hub
+=== Recipe with Docker from Docker Hub - tides_app_remote_docker
 
 Create Dockerrun.aws.json in a separate dir.
 
