@@ -2,3 +2,5 @@
 .elasticbeanstalk/*
 .git
 .gitignore
+plot.png
+__pycache__

@@ -7,22 +7,26 @@ from tides import process_from_web
 application = Flask(__name__, static_url_path='')
 
 
-page = """<HTML>
-<HEAD>
-<TITLE>Tide - Chelsea</TITLE>
-</HEAD>
-<BODY BGCOLOR="WHITE">
-<P ALIGN="CENTER">
-<IMG SRC="plot.png" STYLE="WIDTH: 100%" ALT="NO IMAGE!" WIDTHX="840" HEIGHTX="420">
-</P>
-</BODY>
-</HTML>"""
+page = """<!doctype html>
+<html>
+<head>
+<title>Tide - Chelsea</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
+</head>
+<body bgcolor="white">
+<p align="center">
+<img src="data:image/png;base64, {image}" style="width: 100%" alt="tide"/>
+</p>
+<button onclick="location.reload(true);" style="font-size:32px">Refresh <i class="fa fa-refresh"></i></button>
+</body>
+</html>"""
 
 
 @application.route('/')
 def process():
-    process_from_web('Chelsea', show_plot=False, save_to_file=True, all_five_days=False, save_plot_png=True)
-    return page
+    base64_content = process_from_web('Chelsea', show_plot=False, save_to_file=True, all_five_days=False,
+                      save_plot_png=True, return_base64=True)
+    return page.format(image=base64_content.decode("utf-8"))
 
 
 @application.route('/plot.png')

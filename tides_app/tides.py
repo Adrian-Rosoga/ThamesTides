@@ -1,6 +1,8 @@
 #!/usr/bin/env python3
 
 
+import io
+import base64
 import pytz
 import sys
 import time
@@ -86,7 +88,8 @@ def parse(file_content):
             yield timestamp_obj, float(water_level.text)
 
 
-def process(generator, station='', show_plot=True, save_to_file=False, all_five_days=False, save_plot_png=False):
+def process(generator, station='', show_plot=True, save_to_file=False, all_five_days=False,
+            save_plot_png=False, return_base64=False):
 
     dates = []
     levels = []
@@ -121,10 +124,12 @@ def process(generator, station='', show_plot=True, save_to_file=False, all_five_
                      f'Max tide rise speed {max(tide_speed_cm_per_min):.1f}cm/min',
                      f'Max tide decrease speed {min(tide_speed_cm_per_min):.1f}cm/min')))
 
-    plot(station, dates, levels, tide_speed_cm_per_min, show_plot, save_to_file, all_five_days, save_plot_png)
+    return plot(station, dates, levels, tide_speed_cm_per_min, show_plot, save_to_file,
+                all_five_days, save_plot_png, return_base64)
 
 
-def plot(station, dates, levels, tide_speed_cm_per_min, show_plot, save_to_file, all_five_days=False, save_plot_png=False):
+def plot(station, dates, levels, tide_speed_cm_per_min, show_plot, save_to_file,
+         all_five_days=False, save_plot_png=False, return_base64=False):
 
     # Colors from http://ksrowell.com/blog-visualizing-data/2012/02/02/optimal-colors-for-graphs/
     water_color = '#396AB1'
@@ -190,6 +195,14 @@ def plot(station, dates, levels, tide_speed_cm_per_min, show_plot, save_to_file,
     plot.legend(loc='upper left', fontsize='x-large')
     plot2.legend(loc='upper right', fontsize='x-large')
 
+    # Return base64 encoded
+    if return_base64:
+        image_bytes = io.BytesIO()
+        plt.savefig(image_bytes, format='png')
+        image_bytes.seek(0)
+        plot_png_base64 = base64.b64encode(image_bytes.read())
+        return plot_png_base64
+
     # Save to file
     if save_to_file:
         number_days = 5 if all_five_days else 2
@@ -211,16 +224,20 @@ def plot(station, dates, levels, tide_speed_cm_per_min, show_plot, save_to_file,
         plt.show()
 
 
-def process_from_web(station: str, show_plot=True, save_to_file=False, all_five_days=False, save_plot_png=False):
+def process_from_web(station: str, show_plot=True, save_to_file=False, all_five_days=False,
+                     save_plot_png=False, return_base64=False):
 
     tide_info_page = TIDE_INFO_WEBPAGE_TEMPLATE.format(station=STATIONS[station][0])
 
-    process(tide_data_generator_from_web(tide_info_page), station, show_plot, save_to_file, all_five_days, save_plot_png)
+    return process(tide_data_generator_from_web(tide_info_page), station, show_plot, save_to_file,
+                   all_five_days, save_plot_png, return_base64)
 
 
-def process_from_file(station: str, filename: str, show_plot=True, save_to_file=False, all_five_days=False, save_plot_png=False):
+def process_from_file(station: str, filename: str, show_plot=True, save_to_file=False, all_five_days=False,
+                      save_plot_png=False, return_base64=False):
 
-    process(tide_data_generator_from_file(filename), station, show_plot, save_to_file, all_five_days, save_plot_png)
+    return process(tide_data_generator_from_file(filename), station, show_plot, save_to_file,
+                   all_five_days, save_plot_png, return_base64)
 
 
 if __name__ == '__main__':
@@ -271,4 +288,4 @@ if __name__ == '__main__':
             time.sleep(MINUTES_TO_SLEEP * 60)
 
     process_from_web(station, show_plot=show_plot, save_to_file=save_to_file,
-                     all_five_days=all_five_days, save_plot_png=save_plot_png)
+                     all_five_days=all_five_days)

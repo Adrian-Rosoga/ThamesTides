@@ -1,20 +1,19 @@
-import sys
 from tides import process_from_web
 
 
-page = '''<!DOCTYPE html>
-<HTML>
-<HEAD>
-<TITLE>Tide - Chelsea</TITLE>
+page = '''<!doctype html>
+<html>
+<head>
+<title>Tide - Chelsea</title>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
-</HEAD>
-<BODY>
-<P ALIGN="CENTER">
-<img src="data:image/png;base64, {image}" STYLE="WIDTH: 100%" alt="Tide" />
-</P>
-<button style="font-size:32px">Refresh <i class="fa fa-refresh"></i></button>
-</BODY>
-</HTML>'''
+</head>
+<body>
+<p align="center">
+</p>
+<img src="data:image/png;base64, {image}" style="width: 100%" alt="tide"/>
+<button onclick="location.reload(true);" style="font-size:32px">Refresh <i class="fa fa-refresh"></i></button>
+</body>
+</html>'''
 
 
 def handler(event, context):
