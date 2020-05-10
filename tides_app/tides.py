@@ -201,6 +201,13 @@ def plot(station, dates, levels, tide_speed_cm_per_min, show_plot, save_to_file,
         plt.savefig(image_bytes, format='png')
         image_bytes.seek(0)
         plot_png_base64 = base64.b64encode(image_bytes.read())
+
+        # Release the memory. Alert when running out of memory was:
+        # RuntimeWarning: More than 20 figures have been opened. Figures created through the pyplot
+        # interface (`matplotlib.pyplot.figure`) are retained until explicitly closed and may consume
+        # too much memory. (To control this warning, see the rcParam `figure.max_open_warning`).
+        plt.close()
+
         return plot_png_base64
 
     # Save to file
