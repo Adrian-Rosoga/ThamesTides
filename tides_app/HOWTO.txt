@@ -10,7 +10,7 @@ https://docs.aws.amazon.com/elasticbeanstalk/latest/dg/create-deploy-python-flas
 
 I created and worked on ~/code_local/tides_app
 
-cd ~/code_local
+cd ~/code_local/ThamesTides
 mkdir tides_app
 cd tides_app
 

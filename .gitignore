@@ -4,3 +4,7 @@ venv/
 .mypy_cache/
 .git/
 records/
+# Elastic Beanstalk Files
+.elasticbeanstalk/*
+!.elasticbeanstalk/*.cfg.yml
+!.elasticbeanstalk/*.global.yml
