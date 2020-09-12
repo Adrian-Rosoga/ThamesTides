@@ -1,4 +1,3 @@
-import os
 from flask import Flask, send_from_directory
 from tides import process_from_web
 
@@ -6,11 +5,12 @@ from tides import process_from_web
 # EB looks for an 'application' callable by default.
 application = Flask(__name__, static_url_path='')
 
+SITE = 'Westminster'
 
 page = """<!doctype html>
 <html>
 <head>
-<title>Tide - Chelsea</title>
+<title>Tide - {site}</title>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
 </head>
 <body bgcolor="white">
@@ -24,9 +24,9 @@ page = """<!doctype html>
 
 @application.route('/')
 def process():
-    base64_content = process_from_web('Chelsea', show_plot=False, save_to_file=True, all_five_days=False,
+    base64_content = process_from_web(SITE, show_plot=False, save_to_file=True, all_five_days=False,
                       save_plot_png=True, return_base64=True)
-    return page.format(image=base64_content.decode("utf-8"))
+    return page.format(site=SITE, image=base64_content.decode("utf-8"))
 
 
 @application.route('/plot.png')

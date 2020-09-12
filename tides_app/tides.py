@@ -104,8 +104,8 @@ def process(generator, station='', show_plot=True, save_to_file=False, all_five_
         levels = levels[4 * 24 * 4:]
 
     if len(dates) == 0:
-        print('No data!')
-        return
+        print(f'Error: No data for station {station}!')
+        return None
 
     tide_speed_cm_per_min = [(l2 - l1) * 100.0 / 15.0 for l2, l1 in zip(levels[1:], levels[:-1])]
 
@@ -236,15 +236,22 @@ def process_from_web(station: str, show_plot=True, save_to_file=False, all_five_
 
     tide_info_page = TIDE_INFO_WEBPAGE_TEMPLATE.format(station=STATIONS[station][0])
 
-    return process(tide_data_generator_from_web(tide_info_page), station, show_plot, save_to_file,
+    plot = process(tide_data_generator_from_web(tide_info_page), station, show_plot, save_to_file,
                    all_five_days, save_plot_png, return_base64)
+
+    if plot is None:
+       print(f'\nError: No data from web site {tide_info_page}') 
+
+    return plot
 
 
 def process_from_file(station: str, filename: str, show_plot=True, save_to_file=False, all_five_days=False,
                       save_plot_png=False, return_base64=False):
 
-    return process(tide_data_generator_from_file(filename), station, show_plot, save_to_file,
+    plot = process(tide_data_generator_from_file(filename), station, show_plot, save_to_file,
                    all_five_days, save_plot_png, return_base64)
+    
+    return plot
 
 
 if __name__ == '__main__':
@@ -273,7 +280,9 @@ if __name__ == '__main__':
     save_plot_png = False if not args.save_plot_png else True
 
     # Fallback - Chelsea is nearer until Westminster comes back online (down Feb 2020)
+    # Fallback #2 - Westminster  came up
     station = args.station if args.station else 'Chelsea'
+    station = args.station if args.station else 'Westminster'
 
     if args.all:
         for station in STATIONS:
