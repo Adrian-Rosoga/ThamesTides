@@ -1,14 +1,15 @@
-#!/usr/bin/env python3
-
+"""
+Scrapes Thames tide level from the web
+"""
 
 import io
 import base64
-import pytz
 import sys
 import time
 import datetime
-import requests
 import argparse
+import pytz
+import requests
 from bs4 import BeautifulSoup
 import matplotlib.pyplot as plt
 import matplotlib.dates as mdates
@@ -264,20 +265,20 @@ if __name__ == '__main__':
     parser.add_argument('--noplot', help='do not show the plot on screen', action='store_true')
     parser.add_argument('--save', help='save to file', action='store_true')
     parser.add_argument('--five', help='all (five) days', action='store_true')
-    parser.add_argument(f'--continuous', help='repeat every {MINUTES_TO_SLEEP} mins', action='store_true')
+    parser.add_argument('--continuous', help='repeat every {MINUTES_TO_SLEEP} mins', action='store_true')
     parser.add_argument('--save_plot_png', help='save as plot.png', action='store_true')
     args = parser.parse_args()
 
     if args.list:
-        for station in STATIONS.keys():
+        for station in STATIONS:
             print(station)
         sys.exit(0)
 
-    all_five_days = True if args.five else False
+    all_five_days = bool(args.five)
 
-    show_plot = False if args.noplot else True
-    save_to_file = False if not args.save else True
-    save_plot_png = False if not args.save_plot_png else True
+    show_plot = not args.noplot
+    save_to_file = not args.save
+    save_plot_png = not args.save_plot_png
 
     # Fallback - Chelsea is nearer until Westminster comes back online (down Feb 2020)
     # Fallback #2 - Westminster  came up
